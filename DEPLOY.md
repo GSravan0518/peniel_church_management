@@ -1,132 +1,107 @@
-# Deploy Peniel Evangelical Fellowship
+# Deploy on Render (full site)
 
-Recommended setup for **penielevangelicalfellowship.org**:
+This project can run as **one Render Web Service**: website + API together.
 
-| Piece | Host |
-|-------|------|
-| Frontend (React/Vite) | **Vercel** |
-| Backend (Express API) | **Render** |
+| Piece | Where |
+|-------|--------|
+| Website + API | **Render** Web Service |
 | Database | **MongoDB Atlas** |
-| Domain | `penielevangelicalfellowship.org` |
 
-## 1. MongoDB Atlas
+Repo: https://github.com/GSravan0518/peniel_church_management
 
-1. Create a free cluster at [mongodb.com/atlas](https://www.mongodb.com/atlas).
-2. Create a database user and allow network access (`0.0.0.0/0` for Render).
-3. Copy the connection string, e.g.  
-   `mongodb+srv://USER:PASS@cluster.mongodb.net/peniel_fellowship`
+---
 
-## 2. Backend on Render
+## 1. MongoDB Atlas (required first)
 
-1. Push this repo to GitHub.
-2. In Render: **New → Web Service** → connect the repo.
-3. Settings:
-   - **Root Directory:** `backend`
-   - **Build Command:** `npm install`
-   - **Start Command:** `npm start`
-4. Environment variables:
+1. Go to [mongodb.com/atlas](https://www.mongodb.com/atlas) → create a **free** cluster.
+2. Create a database user (username + password).
+3. **Network Access** → Add IP Address → allow `0.0.0.0/0` (so Render can connect).
+4. Click **Connect** → Drivers → copy the URI, e.g.  
+   `mongodb+srv://USER:PASSWORD@cluster0.xxxxx.mongodb.net/peniel_fellowship`
 
-```env
-NODE_ENV=production
-MONGODB_URI=mongodb+srv://USER:PASS@cluster.mongodb.net/peniel_fellowship
-JWT_SECRET=long-random-secret
-JWT_EXPIRE=7d
-CLIENT_URL=https://penielevangelicalfellowship.org,https://www.penielevangelicalfellowship.org
-CHURCH_NAME=Peniel Evangelical Fellowship
-```
+---
 
-5. After deploy, note your API URL, e.g. `https://peniel-api.onrender.com`.
-6. Clear any old sample data (optional), then create your real admin/pastor:
+## 2. Deploy on Render
 
-```bash
+1. Open [render.com](https://render.com) → sign in with GitHub.
+2. **New** → **Web Service**.
+3. Connect repository: `GSravan0518/peniel_church_management`.
+4. Settings:
+
+| Setting | Value |
+|---------|--------|
+| Name | `peniel-fellowship` (or any name) |
+| Region | closest to you |
+| Branch | `master` |
+| Root Directory | *(leave empty)* |
+| Runtime | Node |
+| Build Command | `npm run build:render` |
+| Start Command | `npm start` |
+| Instance type | Free |
+
+5. **Environment** variables:
+
+| Key | Value |
+|-----|--------|
+| `NODE_ENV` | `production` |
+| `MONGODB_URI` | your Atlas connection string |
+| `JWT_SECRET` | any long random string |
+| `JWT_EXPIRE` | `7d` |
+| `CHURCH_NAME` | `Peniel Evangelical Fellowship` |
+| `VITE_API_URL` | `/api` |
+| `VITE_CHURCH_NAME` | `Peniel Evangelical Fellowship` |
+
+`CLIENT_URL` is optional on Render — the service URL is allowed automatically.
+
+6. Click **Create Web Service** and wait for the build (first build can take several minutes).
+
+7. Open your live URL:  
+   `https://peniel-fellowship.onrender.com`  
+   (name may differ based on what you chose).
+
+---
+
+## 3. Create admin account (after first deploy)
+
+On your computer (with Atlas URI in `backend/.env`):
+
+```powershell
 cd backend
-# MONGODB_URI must point at Atlas in .env
-npm run seed
-# Then create staff with YOUR identity (no demo passwords):
-# STAFF_ROLE=admin STAFF_NAME="..." STAFF_EMAIL="..." STAFF_PHONE="..." STAFF_PASSWORD="..." npm run create:staff
-# STAFF_ROLE=pastor STAFF_NAME="..." STAFF_EMAIL="..." STAFF_PHONE="..." STAFF_PASSWORD="..." npm run create:staff
+$env:STAFF_ROLE="admin"
+$env:STAFF_NAME="Your Name"
+$env:STAFF_EMAIL="you@example.com"
+$env:STAFF_PHONE="7702096239"
+$env:STAFF_PASSWORD="your-secure-password"
+npm run create:staff
 ```
 
-Believers register themselves on the live site at `/register`.
+Or use **Render Shell** on the service and run the same with env vars set.
 
-## 3. Frontend on Vercel
+Believers register on the live site at `/register`.
 
-1. Import the same GitHub repo in Vercel.
-2. Settings:
-   - **Root Directory:** `frontend`
-   - **Framework:** Vite
-   - **Build Command:** `npm run build`
-   - **Output Directory:** `dist`
-3. Environment variables:
+---
 
-```env
-VITE_API_URL=https://peniel-api.onrender.com/api
-VITE_CHURCH_NAME=Peniel Evangelical Fellowship
-```
+## 4. Mobile Google Chrome
 
-4. Deploy.
+1. Open the Render URL in Chrome on your phone.
+2. Menu → **Add to Home screen** / **Install app**.
 
-## 4. Custom domain `penielevangelicalfellowship.org`
+Free Render services may **sleep** after idle time; the first open can take ~30–60 seconds.
 
-### On Vercel (website)
+---
 
-1. Project → **Settings → Domains**
-2. Add:
-   - `penielevangelicalfellowship.org`
-   - `www.penielevangelicalfellowship.org`
-3. At your domain registrar, add the DNS records Vercel shows (usually):
-   - `A` record `@` → `76.76.21.21`
-   - `CNAME` `www` → `cname.vercel-dns.com`
+## 5. Custom domain (optional)
 
-### Optional API subdomain
+Render → your service → **Settings → Custom Domains** → add `penielevangelicalfellowship.org` and follow the DNS instructions.
 
-- Add `api.penielevangelicalfellowship.org` in Render custom domains and point a `CNAME` to your Render service.
-- Then set `VITE_API_URL=https://api.penielevangelicalfellowship.org/api`
+---
 
-Update Render `CLIENT_URL` to include your live Vercel URLs.
+## Local vs Render
 
-## 5. Mobile Google Chrome (after deploy)
+| | Local | Render |
+|--|--------|--------|
+| API | `http://localhost:5000` | same host as site |
+| Web | `http://localhost:5173` | `https://YOUR-APP.onrender.com` |
+| `VITE_API_URL` | `http://localhost:5000/api` | `/api` |
 
-The site is mobile-responsive and installable as a Progressive Web App (PWA) once it is live on **HTTPS** (Vercel provides this automatically).
-
-### Use in Chrome on Android
-
-1. Deploy frontend to Vercel and backend to Render (steps above).
-2. Set `VITE_API_URL` to your **live** Render API (`https://….onrender.com/api`).
-3. On your phone, open Chrome and go to your live site, e.g.  
-   `https://penielevangelicalfellowship.org`  
-   or your Vercel URL `https://your-app.vercel.app`.
-4. Optional — install like an app:  
-   Chrome menu (⋮) → **Install app** or **Add to Home screen**.
-5. The home-screen icon opens Peniel in standalone mode (no browser bar).
-
-### Checklist so mobile Chrome works after deploy
-
-| Item | What to set |
-|------|-------------|
-| Frontend HTTPS | Vercel (automatic) |
-| API HTTPS | Render (automatic) |
-| `VITE_API_URL` | Full HTTPS API URL ending in `/api` |
-| `CLIENT_URL` on Render | Your exact Vercel / domain URL(s), comma-separated |
-| PWA icons | Included (`icon-192.png`, `icon-512.png`) |
-| Service worker | Registers in production (`/sw.js`) |
-
-If the site opens but login/gallery fails on phone, almost always `CLIENT_URL` or `VITE_API_URL` is wrong — fix env vars and redeploy.
-
-## 6. Admin / Pastor / Believer
-
-| Portal | URL path | How to get an account |
-|--------|----------|------------------------|
-| Believer | `/login/believer` | Register at `/register` with a real identity |
-| Pastor | `/login/pastor` | Create with `npm run create:staff` (`STAFF_ROLE=pastor`) |
-| Admin | `/login/admin` | Create with `npm run create:staff` (`STAFF_ROLE=admin`) |
-
-**Admin** can upload gallery pictures and monitor users, bookings, prayers, and contact messages. No demo passwords are shipped.
-## 7. Gallery uploads on Render
-
-Uploaded pictures are saved under `backend/uploads` on the API server. On Render’s free tier the disk is **ephemeral** (files can disappear on redeploy). For production photos that must persist, either:
-
-- Use a **persistent disk** on a paid Render plan, or
-- Later switch uploads to cloud storage (Cloudinary / S3).
-
-Until then, re-upload after major redeploys if needed.
+Blueprint file: [`render.yaml`](./render.yaml) — you can also use **New → Blueprint** and select this repo.

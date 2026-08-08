@@ -13,7 +13,9 @@
     "create:staff": "npm run create:staff --prefix backend",
     "db:check": "npm run db:check --prefix backend",
     "start:backend": "npm start --prefix backend",
-    "build": "npm run build --prefix frontend"
+    "build": "npm run build --prefix frontend",
+    "build:render": "npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend && node scripts/copyFrontend.js",
+    "start": "npm start --prefix backend"
   },
   "devDependencies": {
     "concurrently": "^10.0.4"

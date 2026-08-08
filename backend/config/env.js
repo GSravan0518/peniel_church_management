@@ -3,7 +3,7 @@ const dotenv = require('dotenv');
 
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
-const required = ['MONGODB_URI', 'JWT_SECRET', 'CLIENT_URL'];
+const required = ['MONGODB_URI', 'JWT_SECRET'];
 
 const missing = required.filter((key) => !process.env[key] || !String(process.env[key]).trim());
 
@@ -13,10 +13,18 @@ if (missing.length) {
   process.exit(1);
 }
 
-const clientOrigins = String(process.env.CLIENT_URL)
+const clientOrigins = String(
+  process.env.CLIENT_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:5173'
+)
   .split(',')
   .map((s) => s.trim())
   .filter(Boolean);
+
+// Render sets RENDER_EXTERNAL_URL — always allow the live service origin
+if (process.env.RENDER_EXTERNAL_URL) {
+  const renderUrl = process.env.RENDER_EXTERNAL_URL.replace(/\/$/, '');
+  if (!clientOrigins.includes(renderUrl)) clientOrigins.push(renderUrl);
+}
 
 const config = {
   port: Number(process.env.PORT) || 5000,

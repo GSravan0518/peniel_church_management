@@ -12,6 +12,7 @@ frontend/.env
 
 # Build / logs
 frontend/dist/
+backend/public/
 backend/uploads/*
 !backend/uploads/.gitkeep
 *.log

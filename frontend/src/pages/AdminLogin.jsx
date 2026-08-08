@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-export default function BelieverLogin() {
+export default function AdminLogin() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ emailOrPhone: '', password: '' });
@@ -14,10 +14,10 @@ export default function BelieverLogin() {
     setLoading(true);
     setError('');
     try {
-      await login(form.emailOrPhone, form.password, 'believer');
-      navigate('/member-dashboard');
+      await login(form.emailOrPhone, form.password, 'admin');
+      navigate('/admin-dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Believer login failed');
+      setError(err.response?.data?.message || 'Admin login failed');
     } finally {
       setLoading(false);
     }
@@ -29,9 +29,11 @@ export default function BelieverLogin() {
         <p className="brand-hero compact">
           Peniel <em>Evangelical Fellowship</em>
         </p>
-        <p className="eyebrow">Believer portal</p>
-        <h1>Believer Login</h1>
-        <p className="muted">Sign in with your email or phone number.</p>
+        <p className="eyebrow">Admin portal</p>
+        <h1>Admin Login</h1>
+        <p className="muted">
+          Full website monitoring and authority to upload gallery pictures.
+        </p>
 
         <form onSubmit={onSubmit}>
           <label>
@@ -57,15 +59,12 @@ export default function BelieverLogin() {
           </label>
           {error && <p className="form-status error">{error}</p>}
           <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? 'Signing in…' : 'Login as Believer'}
+            {loading ? 'Signing in…' : 'Login as Admin'}
           </button>
         </form>
 
         <p className="auth-foot">
-          New believer? <Link to="/register">Create an account</Link>
-        </p>
-        <p className="auth-foot">
-          Are you a pastor? <Link to="/login/pastor">Pastor Login</Link>
+          Pastor access? <Link to="/login/pastor">Pastor Login</Link>
         </p>
       </div>
     </div>

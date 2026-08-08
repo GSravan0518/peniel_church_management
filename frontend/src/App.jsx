@@ -11,9 +11,11 @@ import Contact from './pages/Contact';
 import Login from './pages/Login';
 import BelieverLogin from './pages/BelieverLogin';
 import PastorLogin from './pages/PastorLogin';
+import AdminLogin from './pages/AdminLogin';
 import Register from './pages/Register';
 import MemberDashboard from './pages/MemberDashboard';
 import PastorDashboard from './pages/PastorDashboard';
+import AdminDashboard from './pages/AdminDashboard';
 import './index.css';
 
 export default function App() {
@@ -31,12 +33,16 @@ export default function App() {
             <Route path="login" element={<Login />} />
             <Route path="login/believer" element={<BelieverLogin />} />
             <Route path="login/pastor" element={<PastorLogin />} />
+            <Route path="login/admin" element={<AdminLogin />} />
             <Route path="register" element={<Register />} />
             <Route element={<ProtectedRoute roles={['member']} />}>
               <Route path="member-dashboard" element={<MemberDashboard />} />
             </Route>
-            <Route element={<ProtectedRoute roles={['pastor', 'admin']} />}>
+            <Route element={<ProtectedRoute roles={['pastor']} />}>
               <Route path="pastor-dashboard" element={<PastorDashboard />} />
+            </Route>
+            <Route element={<ProtectedRoute roles={['admin']} />}>
+              <Route path="admin-dashboard" element={<AdminDashboard />} />
             </Route>
           </Route>
         </Routes>

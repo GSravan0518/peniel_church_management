@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "seed": "node seed.js"
+    "seed": "node seed.js",
+    "create:staff": "node scripts/createStaff.js",
+    "db:check": "node scripts/checkDb.js"
   },
   "keywords": [
     "church",

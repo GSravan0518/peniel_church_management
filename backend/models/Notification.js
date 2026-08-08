@@ -6,7 +6,14 @@ const notificationSchema = new mongoose.Schema(
     message: { type: String, required: true },
     type: {
       type: String,
-      enum: ['home_program_request', 'weekly_digest', 'general'],
+      enum: [
+        'home_program_request',
+        'prayer_request',
+        'weekly_digest',
+        'day_of_program',
+        'calendar_reminder',
+        'general',
+      ],
       default: 'general',
     },
     forRole: { type: String, enum: ['pastor', 'admin', 'member'], default: 'pastor' },

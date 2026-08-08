@@ -1,30 +1,59 @@
-import { useEffect, useState } from 'react';
-import { format } from 'date-fns';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  addMonths,
+  eachDayOfInterval,
+  endOfMonth,
+  endOfWeek,
+  format,
+  isSameDay,
+  isSameMonth,
+  startOfMonth,
+  startOfWeek,
+} from 'date-fns';
 import api from '../api/axios';
 import { eventTypeLabel } from '../data/eventTypes';
 
 export default function PastorDashboard() {
   const [data, setData] = useState(null);
-  const [weekly, setWeekly] = useState(null);
-  const [tab, setTab] = useState('home-programs');
+  const [calendar, setCalendar] = useState({ events: [], todays: [] });
+  const [monthCursor, setMonthCursor] = useState(new Date());
+  const [selectedDay, setSelectedDay] = useState(new Date());
+  const [tab, setTab] = useState('calendar');
   const [message, setMessage] = useState('');
 
+  const monthKey = format(monthCursor, 'yyyy-MM');
+
   const load = async () => {
-    const [dash, digest] = await Promise.all([
+    const [dash, cal] = await Promise.all([
       api.get('/dashboard/pastor'),
-      api.get('/home-programs/weekly-digest'),
+      api.get('/calendar', { params: { month: monthKey } }),
     ]);
     setData(dash.data);
-    setWeekly(digest.data);
+    setCalendar(cal.data);
+    if (dash.data.stats?.newDayNotifications > 0) {
+      setMessage(
+        `${dash.data.stats.newDayNotifications} day-of program notification(s) created for today.`
+      );
+    }
   };
 
   useEffect(() => {
     load().catch(() => {});
-  }, []);
+  }, [monthKey]);
 
-  const setStatus = async (id, status) => {
+  const setProgramStatus = async (id, status) => {
     await api.patch(`/home-programs/${id}/status`, { status });
-    setMessage(`Request ${status}`);
+    setMessage(
+      status === 'accepted'
+        ? 'Program approved and saved to calendar.'
+        : `Request ${status}`
+    );
+    load();
+  };
+
+  const setPrayerStatus = async (id, status) => {
+    await api.patch(`/prayers/${id}/status`, { status });
+    setMessage(`Prayer ${status}`);
     load();
   };
 
@@ -43,6 +72,16 @@ export default function PastorDashboard() {
     load();
   };
 
+  const monthDays = useMemo(() => {
+    const start = startOfWeek(startOfMonth(monthCursor));
+    const end = endOfWeek(endOfMonth(monthCursor));
+    return eachDayOfInterval({ start, end });
+  }, [monthCursor]);
+
+  const eventsOnSelected = (calendar.events || []).filter((event) =>
+    isSameDay(new Date(event.date), selectedDay)
+  );
+
   if (!data) {
     return (
       <div className="page-loading">
@@ -51,177 +90,209 @@ export default function PastorDashboard() {
     );
   }
 
-  const weekLabel =
-    data.weekStart && data.weekEnd
-      ? `${format(new Date(data.weekStart), 'MMM d')} – ${format(new Date(data.weekEnd), 'MMM d')}`
-      : '';
-
   return (
     <div className="page dashboard">
       <header className="page-banner">
         <h1>Pastor Dashboard</h1>
         <p>
-          Accept home program slots and review the Sunday–Sunday weekly notification ({weekLabel}).
+          Approve prayer requests and event bookings. Approved programs appear on your calendar in
+          12-hour time. On the program day you receive reminders.
         </p>
       </header>
 
       <section className="section">
         <div className="section-inner">
           <div className="dash-tabs">
-            {['home-programs', 'weekly', 'notifications', 'prayers', 'messages'].map((t) => (
+            {['calendar', 'bookings', 'prayers', 'notifications', 'messages'].map((t) => (
               <button
                 key={t}
                 type="button"
                 className={tab === t ? 'is-active' : ''}
                 onClick={() => setTab(t)}
               >
-                {t.replace('-', ' ')}
+                {t}
               </button>
             ))}
           </div>
 
           {message && <p className="form-status success">{message}</p>}
 
-          {tab === 'home-programs' && (
-            <>
-              <div className="stat-row pastor-stats">
-                <div>
-                  <strong>{data.stats.pendingHomePrograms}</strong>
-                  <span>Pending slots</span>
+          <div className="stat-row pastor-stats">
+            <div>
+              <strong>{data.stats.pendingHomePrograms}</strong>
+              <span>Pending bookings</span>
+            </div>
+            <div>
+              <strong>{data.stats.pendingPrayers}</strong>
+              <span>Pending prayers</span>
+            </div>
+            <div>
+              <strong>{data.stats.todayPrograms}</strong>
+              <span>Today’s programs</span>
+            </div>
+            <div>
+              <strong>{data.stats.unreadNotifications}</strong>
+              <span>Unread notices</span>
+            </div>
+          </div>
+
+          {tab === 'calendar' && (
+            <div className="calendar-layout">
+              <div className="dash-panel">
+                <div className="calendar-toolbar">
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => setMonthCursor((d) => addMonths(d, -1))}
+                  >
+                    Prev
+                  </button>
+                  <h2>{format(monthCursor, 'MMMM yyyy')}</h2>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => setMonthCursor((d) => addMonths(d, 1))}
+                  >
+                    Next
+                  </button>
                 </div>
-                <div>
-                  <strong>{data.stats.weekRequests}</strong>
-                  <span>This week’s requests</span>
-                </div>
-                <div>
-                  <strong>{data.stats.unreadNotifications}</strong>
-                  <span>Unread notices</span>
-                </div>
-                <div>
-                  <strong>{data.stats.members}</strong>
-                  <span>Members</span>
+
+                <div className="calendar-grid">
+                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
+                    <div key={d} className="calendar-dow">
+                      {d}
+                    </div>
+                  ))}
+                  {monthDays.map((day) => {
+                    const dayEvents = (calendar.events || []).filter((event) =>
+                      isSameDay(new Date(event.date), day)
+                    );
+                    const isSelected = isSameDay(day, selectedDay);
+                    return (
+                      <button
+                        key={day.toISOString()}
+                        type="button"
+                        className={[
+                          'calendar-day',
+                          !isSameMonth(day, monthCursor) ? 'is-muted' : '',
+                          isSelected ? 'is-selected' : '',
+                          dayEvents.length ? 'has-events' : '',
+                        ]
+                          .filter(Boolean)
+                          .join(' ')}
+                        onClick={() => setSelectedDay(day)}
+                      >
+                        <span>{format(day, 'd')}</span>
+                        {dayEvents.length > 0 && (
+                          <em>
+                            {dayEvents.length} · {dayEvents[0].time12h}
+                          </em>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
               <div className="dash-panel">
-                <h2>Pending home program requests</h2>
-                <p className="muted">Accept a slot to confirm the program in the believer’s home.</p>
-                {data.pendingPrograms.length === 0 && (
-                  <p className="muted">No pending requests.</p>
+                <h2>Reminders · {format(selectedDay, 'EEE, MMM d')}</h2>
+                {isSameDay(selectedDay, new Date()) && (
+                  <p className="form-status success">
+                    Today’s programs trigger pastor notifications automatically.
+                  </p>
+                )}
+                {eventsOnSelected.length === 0 && (
+                  <p className="muted">No approved programs on this day.</p>
                 )}
                 <ul className="dash-list stacked">
-                  {data.pendingPrograms.map((item) => (
-                    <li key={item._id}>
+                  {eventsOnSelected.map((event) => (
+                    <li key={event._id}>
                       <div>
                         <strong>
-                          {eventTypeLabel(item.eventType)} · {item.name}
+                          {event.time12h} · {event.title}
                         </strong>
                         <p>
-                          {item.place} · {format(new Date(item.date), 'EEEE, MMM d, yyyy')} ·{' '}
-                          {item.timeOfDay}
-                          {item.phone ? ` · ${item.phone}` : ''}
+                          {event.hostName} · {event.place}
                         </p>
-                        {item.notes && <p className="muted">{item.notes}</p>}
-                      </div>
-                      <div className="action-pair">
-                        <button
-                          type="button"
-                          className="btn btn-primary btn-sm"
-                          onClick={() => setStatus(item._id, 'accepted')}
-                        >
-                          Accept slot
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-ghost btn-sm"
-                          onClick={() => setStatus(item._id, 'rejected')}
-                        >
-                          Reject
-                        </button>
+                        {event.notes && <p className="muted">{event.notes}</p>}
                       </div>
                     </li>
                   ))}
                 </ul>
+
+                <h3>Today at a glance</h3>
+                <ul className="dash-list">
+                  {(data.todaysPrograms || []).map((event) => (
+                    <li key={event._id}>
+                      <span>
+                        {event.time12h} · {event.title}
+                      </span>
+                      <span>{event.place}</span>
+                    </li>
+                  ))}
+                  {(data.todaysPrograms || []).length === 0 && (
+                    <li>
+                      <span className="muted">No programs scheduled today</span>
+                    </li>
+                  )}
+                </ul>
               </div>
-            </>
+            </div>
           )}
 
-          {tab === 'weekly' && weekly && (
+          {tab === 'bookings' && (
             <div className="dash-panel">
-              <h2>Weekly notification (Sunday to Sunday)</h2>
-              <p className="form-status success">{weekly.notification.message}</p>
+              <h2>Pending event bookings</h2>
               <p className="muted">
-                Week of {format(new Date(weekly.summary.weekStart), 'MMM d, yyyy')} to{' '}
-                {format(new Date(weekly.summary.weekEnd), 'MMM d, yyyy')}
+                Approve to store the program on your calendar with 12-hour time.
               </p>
-              <div className="stat-row pastor-stats">
-                <div>
-                  <strong>{weekly.summary.total}</strong>
-                  <span>Total</span>
-                </div>
-                <div>
-                  <strong>{weekly.summary.pending}</strong>
-                  <span>Pending</span>
-                </div>
-                <div>
-                  <strong>{weekly.summary.accepted}</strong>
-                  <span>Accepted</span>
-                </div>
-                <div>
-                  <strong>{weekly.summary.rejected}</strong>
-                  <span>Rejected</span>
-                </div>
-              </div>
+              {data.pendingPrograms.length === 0 && (
+                <p className="muted">No pending bookings.</p>
+              )}
               <ul className="dash-list stacked">
-                {weekly.summary.requests.map((item) => (
+                {data.pendingPrograms.map((item) => (
                   <li key={item._id}>
                     <div>
                       <strong>
                         {eventTypeLabel(item.eventType)} · {item.name}
                       </strong>
                       <p>
-                        {item.place} · {format(new Date(item.date), 'MMM d')} · {item.timeOfDay} ·{' '}
-                        {item.status}
+                        {item.place} · {format(new Date(item.date), 'EEEE, MMM d, yyyy')} ·{' '}
+                        {item.time12h}
+                        {item.phone ? ` · ${item.phone}` : ''}
                       </p>
+                      {item.notes && <p className="muted">{item.notes}</p>}
                     </div>
-                    {item.status === 'pending' && (
+                    <div className="action-pair">
                       <button
                         type="button"
                         className="btn btn-primary btn-sm"
-                        onClick={() => setStatus(item._id, 'accepted')}
+                        onClick={() => setProgramStatus(item._id, 'accepted')}
                       >
-                        Accept
+                        Approve & add to calendar
                       </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {tab === 'notifications' && (
-            <div className="dash-panel">
-              <h2>Pastor notifications</h2>
-              <ul className="dash-list stacked">
-                {data.notifications.map((n) => (
-                  <li key={n._id}>
-                    <div>
-                      <strong>
-                        {n.title}
-                        {!n.isRead ? ' · New' : ''}
-                      </strong>
-                      <p>{n.message}</p>
-                      <span className="muted">{format(new Date(n.createdAt), 'MMM d, yyyy')}</span>
-                    </div>
-                    {!n.isRead && (
                       <button
                         type="button"
                         className="btn btn-ghost btn-sm"
-                        onClick={() => markNotificationRead(n._id)}
+                        onClick={() => setProgramStatus(item._id, 'rejected')}
                       >
-                        Mark read
+                        Reject
                       </button>
-                    )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+
+              <h3>Upcoming calendar</h3>
+              <ul className="dash-list">
+                {(data.upcomingCalendar || []).map((event) => (
+                  <li key={event._id}>
+                    <span>
+                      {event.title} · {event.hostName}
+                    </span>
+                    <span>
+                      {format(new Date(event.date), 'MMM d')} · {event.time12h}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -230,7 +301,38 @@ export default function PastorDashboard() {
 
           {tab === 'prayers' && (
             <div className="dash-panel">
-              <h2>Prayer requests</h2>
+              <h2>Pending prayer requests</h2>
+              {data.pendingPrayers.length === 0 && (
+                <p className="muted">No pending prayer requests.</p>
+              )}
+              <ul className="dash-list stacked">
+                {data.pendingPrayers.map((p) => (
+                  <li key={p._id}>
+                    <div>
+                      <strong>{p.name}</strong>
+                      <p>{p.request}</p>
+                    </div>
+                    <div className="action-pair">
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        onClick={() => setPrayerStatus(p._id, 'approved')}
+                      >
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => setPrayerStatus(p._id, 'rejected')}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+
+              <h3>Approved prayers</h3>
               <ul className="dash-list stacked">
                 {data.prayers.map((p) => (
                   <li key={p._id}>
@@ -245,6 +347,41 @@ export default function PastorDashboard() {
                         onClick={() => markAnswered(p._id)}
                       >
                         Mark answered
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {tab === 'notifications' && (
+            <div className="dash-panel">
+              <h2>Pastor notifications</h2>
+              <p className="muted">
+                Includes booking requests, approvals, and day-of program reminders.
+              </p>
+              <ul className="dash-list stacked">
+                {data.notifications.map((n) => (
+                  <li key={n._id}>
+                    <div>
+                      <strong>
+                        {n.title}
+                        {!n.isRead ? ' · New' : ''}
+                      </strong>
+                      <p>{n.message}</p>
+                      <span className="muted">
+                        {n.type.replace(/_/g, ' ')} ·{' '}
+                        {format(new Date(n.createdAt), 'MMM d, yyyy h:mm a')}
+                      </span>
+                    </div>
+                    {!n.isRead && (
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => markNotificationRead(n._id)}
+                      >
+                        Mark read
                       </button>
                     )}
                   </li>

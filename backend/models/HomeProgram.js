@@ -21,6 +21,8 @@ const homeProgramSchema = new mongoose.Schema(
       required: true,
     },
     date: { type: Date, required: true },
+    /** Display/store time in 12-hour format, e.g. "10:30 AM" */
+    time12h: { type: String, required: true, trim: true },
     timeOfDay: { type: String, enum: ['AM', 'PM'], required: true },
     status: {
       type: String,
@@ -38,5 +40,6 @@ const homeProgramSchema = new mongoose.Schema(
 );
 
 homeProgramSchema.statics.EVENT_TYPES = EVENT_TYPES;
+homeProgramSchema.statics.TIME_12H_REGEX = /^(0?[1-9]|1[0-2]):[0-5][0-9]\s?(AM|PM)$/i;
 
 module.exports = mongoose.model('HomeProgram', homeProgramSchema);

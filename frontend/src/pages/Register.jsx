@@ -39,8 +39,7 @@ export default function Register() {
         <p className="eyebrow">Believer portal</p>
         <h1>Believer registration</h1>
         <p className="muted">
-          Create a believer account to request home programs for birthdays, anniversaries, and other
-          occasions.
+          Create a believer account. You can later login with either your email or phone number.
         </p>
 
         <form onSubmit={onSubmit}>
@@ -54,7 +53,13 @@ export default function Register() {
           </label>
           <label>
             Phone
-            <input name="phone" value={form.phone} onChange={onChange} />
+            <input
+              name="phone"
+              required
+              placeholder="Used for login too"
+              value={form.phone}
+              onChange={onChange}
+            />
           </label>
           <label>
             Password

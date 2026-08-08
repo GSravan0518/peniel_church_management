@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 export default function PastorLogin() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ email: '', password: '' });
+  const [form, setForm] = useState({ emailOrPhone: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -14,7 +14,7 @@ export default function PastorLogin() {
     setLoading(true);
     setError('');
     try {
-      await login(form.email, form.password, 'pastor');
+      await login(form.emailOrPhone, form.password, 'pastor');
       navigate('/pastor-dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Pastor login failed');
@@ -31,16 +31,18 @@ export default function PastorLogin() {
         </p>
         <p className="eyebrow">Pastor portal</p>
         <h1>Pastor Login</h1>
-        <p className="muted">Sign in to accept home program slots and review weekly requests.</p>
+        <p className="muted">Sign in with your email or phone number.</p>
 
         <form onSubmit={onSubmit}>
           <label>
-            Email
+            Email or phone
             <input
-              type="email"
+              type="text"
               required
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              autoComplete="username"
+              placeholder="email@example.com or phone number"
+              value={form.emailOrPhone}
+              onChange={(e) => setForm({ ...form, emailOrPhone: e.target.value })}
             />
           </label>
           <label>
@@ -48,6 +50,7 @@ export default function PastorLogin() {
             <input
               type="password"
               required
+              autoComplete="current-password"
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
             />
@@ -60,9 +63,6 @@ export default function PastorLogin() {
 
         <p className="auth-foot">
           Are you a believer? <Link to="/login/believer">Believer Login</Link>
-        </p>
-        <p className="demo-creds muted">
-          Demo pastor: pastor@penieleevangelicalfellowship.org / pastor123
         </p>
       </div>
     </div>

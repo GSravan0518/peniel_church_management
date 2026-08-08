@@ -20,8 +20,12 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const login = async (email, password, portal) => {
-    const { data } = await api.post('/auth/login', { email, password, portal });
+  const login = async (emailOrPhone, password, portal) => {
+    const { data } = await api.post('/auth/login', {
+      emailOrPhone: String(emailOrPhone || '').trim(),
+      password,
+      portal,
+    });
     localStorage.setItem('token', data.token);
     setUser(data.user);
     return data.user;

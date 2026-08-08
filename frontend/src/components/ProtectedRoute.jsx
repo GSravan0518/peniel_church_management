@@ -1,6 +1,18 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
+function loginPathForRoles(roles = []) {
+  if (roles.includes('admin')) return '/login/admin';
+  if (roles.includes('pastor')) return '/login/pastor';
+  return '/login/believer';
+}
+
+function homeForRole(role) {
+  if (role === 'admin') return '/admin-dashboard';
+  if (role === 'pastor') return '/pastor-dashboard';
+  return '/member-dashboard';
+}
+
 export default function ProtectedRoute({ roles }) {
   const { user, loading } = useAuth();
 
@@ -13,18 +25,11 @@ export default function ProtectedRoute({ roles }) {
   }
 
   if (!user) {
-    const fallback =
-      roles?.includes('pastor') || roles?.includes('admin')
-        ? '/login/pastor'
-        : '/login/believer';
-    return <Navigate to={fallback} replace />;
+    return <Navigate to={loginPathForRoles(roles)} replace />;
   }
+
   if (roles && !roles.includes(user.role)) {
-    const home =
-      user.role === 'pastor' || user.role === 'admin'
-        ? '/pastor-dashboard'
-        : '/member-dashboard';
-    return <Navigate to={home} replace />;
+    return <Navigate to={homeForRole(user.role)} replace />;
   }
 
   return <Outlet />;

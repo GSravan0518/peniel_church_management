@@ -1,12 +1,18 @@
 const express = require('express');
 const HomeProgram = require('../models/HomeProgram');
+const CalendarEvent = require('../models/CalendarEvent');
 const Notification = require('../models/Notification');
 const { protect, authorize } = require('../middleware/auth');
 const { getSundayWeekRange } = require('../utils/week');
+const {
+  normalizeTime12h,
+  periodFromTime12h,
+  ensureTodayProgramNotifications,
+} = require('../utils/time');
+const { eventTypeLabel } = require('../utils/labels');
 
 const router = express.Router();
 
-// Public: accepted home programs (upcoming)
 router.get('/', async (req, res) => {
   try {
     const filter = {};
@@ -16,21 +22,20 @@ router.get('/', async (req, res) => {
       filter.date = { $gte: new Date() };
     }
 
-    const programs = await HomeProgram.find(filter).sort({ date: 1, timeOfDay: 1 });
+    const programs = await HomeProgram.find(filter).sort({ date: 1, time12h: 1 });
     res.json(programs);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
-// Believer submits a home program request
 router.post('/', async (req, res) => {
   try {
-    const { name, place, eventType, date, timeOfDay, phone, notes, userId } = req.body;
+    const { name, place, eventType, date, time12h, phone, notes, userId } = req.body;
 
-    if (!name || !place || !eventType || !date || !timeOfDay) {
+    if (!name || !place || !eventType || !date || !time12h) {
       return res.status(400).json({
-        message: 'Name, place, event type, date, and time (AM/PM) are required',
+        message: 'Name, place, event type, date, and time (12-hour) are required',
       });
     }
 
@@ -38,9 +43,11 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ message: 'Invalid event type' });
     }
 
-    const period = String(timeOfDay).toUpperCase();
-    if (!['AM', 'PM'].includes(period)) {
-      return res.status(400).json({ message: 'Time must be AM or PM' });
+    const normalizedTime = normalizeTime12h(time12h);
+    if (!normalizedTime) {
+      return res.status(400).json({
+        message: 'Time must be in 12-hour format, e.g. 10:30 AM',
+      });
     }
 
     const program = await HomeProgram.create({
@@ -48,22 +55,25 @@ router.post('/', async (req, res) => {
       place,
       eventType,
       date,
-      timeOfDay: period,
+      time12h: normalizedTime,
+      timeOfDay: periodFromTime12h(normalizedTime),
       phone: phone || '',
       notes: notes || '',
       createdBy: userId || undefined,
     });
 
     await Notification.create({
-      title: 'New home program request',
-      message: `${name} requested a ${eventType.replace(/_/g, ' ')} at ${place} on ${new Date(date).toLocaleDateString()} (${period}). Please accept or reject the slot.`,
+      title: 'New event booking request',
+      message: `${name} booked ${eventTypeLabel(eventType)} at ${place} on ${new Date(
+        date
+      ).toLocaleDateString()} at ${normalizedTime}. Please approve.`,
       type: 'home_program_request',
       forRole: 'pastor',
       meta: { programId: program._id, eventType },
     });
 
     res.status(201).json({
-      message: 'Request submitted. The pastor will review and accept the slot.',
+      message: 'Booking submitted. Waiting for pastor approval.',
       program,
     });
   } catch (err) {
@@ -71,7 +81,6 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Pastor: pending + all requests
 router.get('/manage', protect, authorize('pastor', 'admin'), async (_req, res) => {
   try {
     const programs = await HomeProgram.find().sort({ createdAt: -1 });
@@ -81,10 +90,11 @@ router.get('/manage', protect, authorize('pastor', 'admin'), async (_req, res) =
   }
 });
 
-// Weekly digest Sunday → Sunday for pastor (before /:id routes)
 router.get('/weekly-digest', protect, authorize('pastor', 'admin'), async (req, res) => {
   try {
-    const { weekStart, weekEnd } = getSundayWeekRange(req.query.date ? new Date(req.query.date) : new Date());
+    const { weekStart, weekEnd } = getSundayWeekRange(
+      req.query.date ? new Date(req.query.date) : new Date()
+    );
 
     const requests = await HomeProgram.find({
       createdAt: { $gte: weekStart, $lt: weekEnd },
@@ -100,7 +110,6 @@ router.get('/weekly-digest', protect, authorize('pastor', 'admin'), async (req, 
       requests,
     };
 
-    // Ensure a weekly notification exists for this Sunday–Sunday window
     let digest = await Notification.findOne({
       type: 'weekly_digest',
       weekStart,
@@ -108,10 +117,12 @@ router.get('/weekly-digest', protect, authorize('pastor', 'admin'), async (req, 
       forRole: 'pastor',
     });
 
+    const message = `Sunday–Sunday week summary: ${summary.total} request(s) — ${summary.pending} pending, ${summary.accepted} accepted, ${summary.rejected} rejected.`;
+
     if (!digest) {
       digest = await Notification.create({
         title: 'Weekly home program summary',
-        message: `Sunday–Sunday week summary: ${summary.total} request(s) — ${summary.pending} pending, ${summary.accepted} accepted, ${summary.rejected} rejected.`,
+        message,
         type: 'weekly_digest',
         forRole: 'pastor',
         weekStart,
@@ -124,7 +135,7 @@ router.get('/weekly-digest', protect, authorize('pastor', 'admin'), async (req, 
         },
       });
     } else {
-      digest.message = `Sunday–Sunday week summary: ${summary.total} request(s) — ${summary.pending} pending, ${summary.accepted} accepted, ${summary.rejected} rejected.`;
+      digest.message = message;
       digest.meta = {
         total: summary.total,
         pending: summary.pending,
@@ -140,7 +151,6 @@ router.get('/weekly-digest', protect, authorize('pastor', 'admin'), async (req, 
   }
 });
 
-// Pastor accepts or rejects a slot
 router.patch('/:id/status', protect, authorize('pastor', 'admin'), async (req, res) => {
   try {
     const { status, reviewNote } = req.body;
@@ -161,13 +171,45 @@ router.patch('/:id/status', protect, authorize('pastor', 'admin'), async (req, r
 
     if (!program) return res.status(404).json({ message: 'Request not found' });
 
-    await Notification.create({
-      title: status === 'accepted' ? 'Home program accepted' : 'Home program updated',
-      message: `${program.name}'s request at ${program.place} was marked ${status}.`,
-      type: 'home_program_request',
-      forRole: 'pastor',
-      meta: { programId: program._id, status },
-    });
+    if (status === 'accepted') {
+      await CalendarEvent.findOneAndUpdate(
+        { program: program._id },
+        {
+          program: program._id,
+          title: eventTypeLabel(program.eventType),
+          hostName: program.name,
+          place: program.place,
+          eventType: program.eventType,
+          date: program.date,
+          time12h: program.time12h,
+          notes: program.notes || '',
+          phone: program.phone || '',
+          approvedBy: req.user._id,
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+
+      await Notification.create({
+        title: 'Program added to calendar',
+        message: `${eventTypeLabel(program.eventType)} with ${program.name} at ${program.place} on ${new Date(
+          program.date
+        ).toLocaleDateString()} at ${program.time12h} was approved and saved to the calendar.`,
+        type: 'calendar_reminder',
+        forRole: 'pastor',
+        meta: { programId: program._id, time12h: program.time12h },
+      });
+
+      await ensureTodayProgramNotifications();
+    } else {
+      await CalendarEvent.deleteOne({ program: program._id });
+      await Notification.create({
+        title: status === 'rejected' ? 'Program rejected' : 'Program updated',
+        message: `${program.name}'s request at ${program.place} was marked ${status}.`,
+        type: 'home_program_request',
+        forRole: 'pastor',
+        meta: { programId: program._id, status },
+      });
+    }
 
     res.json(program);
   } catch (err) {

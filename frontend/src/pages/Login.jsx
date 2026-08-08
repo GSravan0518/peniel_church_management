@@ -8,18 +8,23 @@ export default function Login() {
           Peniel <em>Evangelical Fellowship</em>
         </p>
         <h1>Choose your login</h1>
-        <p className="muted">Pastors and believers have separate sign-in portals.</p>
+        <p className="muted">Separate portals for believers, pastors, and admins.</p>
 
-        <div className="portal-cards">
+        <div className="portal-cards three">
           <Link to="/login/believer" className="portal-card">
             <h2>Believer Login</h2>
-            <p>Request home programs, track approvals, and join prayer.</p>
+            <p>Book home programs and share prayer requests.</p>
             <span className="text-link">Continue as believer →</span>
           </Link>
           <Link to="/login/pastor" className="portal-card pastor">
             <h2>Pastor Login</h2>
-            <p>Accept home program slots and view weekly notifications.</p>
+            <p>Approve bookings, prayers, and view calendar reminders.</p>
             <span className="text-link">Continue as pastor →</span>
+          </Link>
+          <Link to="/login/admin" className="portal-card admin">
+            <h2>Admin Login</h2>
+            <p>Upload pictures and monitor the whole website.</p>
+            <span className="text-link">Continue as admin →</span>
           </Link>
         </div>
 

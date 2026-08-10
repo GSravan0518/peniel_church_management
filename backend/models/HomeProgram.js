@@ -21,6 +21,8 @@ const homeProgramSchema = new mongoose.Schema(
       required: true,
     },
     date: { type: Date, required: true },
+    /** Calendar day YYYY-MM-DD (stable across timezones) */
+    dateKey: { type: String, trim: true, index: true },
     /** Display/store time in 12-hour format, e.g. "10:30 AM" */
     time12h: { type: String, required: true, trim: true },
     timeOfDay: { type: String, enum: ['AM', 'PM'], required: true },

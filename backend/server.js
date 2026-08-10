@@ -164,6 +164,7 @@ app.use((err, _req, res, _next) => {
 // --------------------------------------------------
 
 const { ensureAdminFromEnv } = require('./utils/ensureAdmin');
+const { startDayOfProgramNotifier } = require('./utils/dayOfProgramJob');
 
 mongoose
   .connect(config.mongoUri)
@@ -176,6 +177,8 @@ mongoose
     } catch (err) {
       console.error('Admin bootstrap error:', err.message);
     }
+
+    startDayOfProgramNotifier();
 
     // Render provides process.env.PORT automatically.
     // Use 5000 when running locally.

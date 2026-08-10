@@ -8,6 +8,7 @@ const {
   normalizeTime12h,
   periodFromTime12h,
   ensureTodayProgramNotifications,
+  calendarDateFromInput,
 } = require('../utils/time');
 const { eventTypeLabel } = require('../utils/labels');
 
@@ -50,11 +51,17 @@ router.post('/', async (req, res) => {
       });
     }
 
+    const parsedDate = calendarDateFromInput(date);
+    if (!parsedDate) {
+      return res.status(400).json({ message: 'Enter a valid program date' });
+    }
+
     const program = await HomeProgram.create({
       name,
       place,
       eventType,
-      date,
+      date: parsedDate.date,
+      dateKey: parsedDate.dateKey,
       time12h: normalizedTime,
       timeOfDay: periodFromTime12h(normalizedTime),
       phone: phone || '',
@@ -62,18 +69,27 @@ router.post('/', async (req, res) => {
       createdBy: userId || undefined,
     });
 
-    await Notification.create({
-      title: 'New event booking request',
-      message: `${name} booked ${eventTypeLabel(eventType)} at ${place} on ${new Date(
-        date
-      ).toLocaleDateString()} at ${normalizedTime}. Please approve.`,
-      type: 'home_program_request',
-      forRole: 'pastor',
-      meta: { programId: program._id, eventType },
-    });
+    const notifyMessage = `${name} booked ${eventTypeLabel(eventType)} at ${place} on ${parsedDate.dateKey} at ${normalizedTime}. Please approve.`;
+
+    await Notification.create([
+      {
+        title: 'New event booking request',
+        message: notifyMessage,
+        type: 'home_program_request',
+        forRole: 'pastor',
+        meta: { programId: program._id, eventType, dateKey: parsedDate.dateKey, time12h: normalizedTime },
+      },
+      {
+        title: 'New event booking request',
+        message: notifyMessage,
+        type: 'home_program_request',
+        forRole: 'admin',
+        meta: { programId: program._id, eventType, dateKey: parsedDate.dateKey, time12h: normalizedTime },
+      },
+    ]);
 
     res.status(201).json({
-      message: 'Booking submitted. Waiting for pastor approval.',
+      message: 'Booking submitted. Waiting for pastor or admin approval.',
       program,
     });
   } catch (err) {
@@ -172,7 +188,19 @@ router.patch('/:id/status', protect, authorize('pastor', 'admin'), async (req, r
     if (!program) return res.status(404).json({ message: 'Request not found' });
 
     if (status === 'accepted') {
-      await CalendarEvent.findOneAndUpdate(
+      const parsedDate = calendarDateFromInput(program.dateKey || program.date);
+      if (!parsedDate) {
+        return res.status(400).json({ message: 'Program has an invalid date' });
+      }
+
+      const time12h = normalizeTime12h(program.time12h) || program.time12h;
+
+      program.date = parsedDate.date;
+      program.dateKey = parsedDate.dateKey;
+      program.time12h = time12h;
+      await program.save();
+
+      const calendarEvent = await CalendarEvent.findOneAndUpdate(
         { program: program._id },
         {
           program: program._id,
@@ -180,8 +208,9 @@ router.patch('/:id/status', protect, authorize('pastor', 'admin'), async (req, r
           hostName: program.name,
           place: program.place,
           eventType: program.eventType,
-          date: program.date,
-          time12h: program.time12h,
+          date: parsedDate.date,
+          dateKey: parsedDate.dateKey,
+          time12h,
           notes: program.notes || '',
           phone: program.phone || '',
           approvedBy: req.user._id,
@@ -191,14 +220,18 @@ router.patch('/:id/status', protect, authorize('pastor', 'admin'), async (req, r
 
       await Notification.create({
         title: 'Program added to calendar',
-        message: `${eventTypeLabel(program.eventType)} with ${program.name} at ${program.place} on ${new Date(
-          program.date
-        ).toLocaleDateString()} at ${program.time12h} was approved and saved to the calendar.`,
+        message: `${eventTypeLabel(program.eventType)} with ${program.name} at ${program.place} on ${parsedDate.dateKey} at ${time12h} was approved and saved to the calendar.`,
         type: 'calendar_reminder',
         forRole: 'pastor',
-        meta: { programId: program._id, time12h: program.time12h },
+        meta: {
+          programId: program._id,
+          calendarEventId: calendarEvent._id,
+          time12h,
+          dateKey: parsedDate.dateKey,
+        },
       });
 
+      // If the program is today, create the pastor day-of notification immediately
       await ensureTodayProgramNotifications();
     } else {
       await CalendarEvent.deleteOne({ program: program._id });

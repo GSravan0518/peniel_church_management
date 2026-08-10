@@ -13,6 +13,8 @@ const calendarEventSchema = new mongoose.Schema(
     place: { type: String, required: true },
     eventType: { type: String, required: true },
     date: { type: Date, required: true },
+    /** Calendar day YYYY-MM-DD (stable across timezones) */
+    dateKey: { type: String, trim: true, index: true },
     time12h: { type: String, required: true },
     notes: { type: String, default: '' },
     phone: { type: String, default: '' },
@@ -22,5 +24,6 @@ const calendarEventSchema = new mongoose.Schema(
 );
 
 calendarEventSchema.index({ date: 1 });
+calendarEventSchema.index({ dateKey: 1 });
 
 module.exports = mongoose.model('CalendarEvent', calendarEventSchema);

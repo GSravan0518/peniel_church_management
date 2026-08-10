@@ -37,13 +37,20 @@ export function AuthProvider({ children }) {
     return data;
   };
 
+  const registerPastor = async (payload) => {
+    const { data } = await api.post('/auth/register-pastor', payload);
+    return data;
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, setUser }}>
+    <AuthContext.Provider
+      value={{ user, loading, login, register, registerPastor, logout, setUser }}
+    >
       {children}
     </AuthContext.Provider>
   );

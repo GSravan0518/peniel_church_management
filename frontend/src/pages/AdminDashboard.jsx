@@ -114,6 +114,22 @@ export default function AdminDashboard() {
     load();
   };
 
+  const setProgramStatus = async (id, status) => {
+    setMessage('');
+    try {
+      await api.patch(`/home-programs/${id}/status`, { status });
+      setMessage(
+        status === 'accepted'
+          ? 'Program approved and saved to calendar.'
+          : `Request ${status}.`
+      );
+      await load();
+      setTab('programs');
+    } catch (err) {
+      setMessage(err.response?.data?.message || 'Could not update program status');
+    }
+  };
+
   if (!data) {
     return (
       <div className="page-loading">
@@ -257,8 +273,8 @@ export default function AdminDashboard() {
                 </div>
               </div>
               <p className="muted">
-                Use Profile to set your photo, Upload for gallery pictures, and Users to add profile
-                pictures for any account.
+                Use Programs to approve or reject home bookings, Profile for your photo, Upload for
+                gallery pictures, and Users to manage profile pictures.
               </p>
             </>
           )}
@@ -425,6 +441,50 @@ export default function AdminDashboard() {
           {tab === 'programs' && (
             <div className="dash-panel">
               <h2>Home program bookings</h2>
+              <p className="muted">
+                Approve pending bookings to add them to the church calendar (same as pastor).
+              </p>
+
+              <h3>Pending</h3>
+              {data.programs.filter((p) => p.status === 'pending').length === 0 && (
+                <p className="muted">No pending bookings.</p>
+              )}
+              <ul className="dash-list stacked">
+                {data.programs
+                  .filter((p) => p.status === 'pending')
+                  .map((p) => (
+                    <li key={p._id}>
+                      <div>
+                        <strong>
+                          {eventTypeLabel(p.eventType)} · {p.name}
+                        </strong>
+                        <p>
+                          {p.place} · {format(new Date(p.date), 'MMM d, yyyy')} · {p.time12h}
+                          {p.phone ? ` · ${p.phone}` : ''}
+                        </p>
+                        {p.notes && <p className="muted">{p.notes}</p>}
+                      </div>
+                      <div className="action-pair">
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-sm"
+                          onClick={() => setProgramStatus(p._id, 'accepted')}
+                        >
+                          Approve & add to calendar
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => setProgramStatus(p._id, 'rejected')}
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+              </ul>
+
+              <h3>All bookings</h3>
               <ul className="dash-list stacked">
                 {data.programs.map((p) => (
                   <li key={p._id}>
@@ -437,6 +497,28 @@ export default function AdminDashboard() {
                       </p>
                     </div>
                     <span className={`status-pill ${p.status}`}>{p.status}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <h3>Calendar (approved)</h3>
+              <p className="muted">
+                Approved date and time are stored on the calendar. Pastors get a notification on
+                that day.
+              </p>
+              {(data.calendar || []).length === 0 && (
+                <p className="muted">No approved programs on the calendar yet.</p>
+              )}
+              <ul className="dash-list">
+                {(data.calendar || []).map((event) => (
+                  <li key={event._id}>
+                    <span>
+                      {event.title} · {event.hostName}
+                    </span>
+                    <span>
+                      {event.dateKey || format(new Date(event.date), 'yyyy-MM-dd')} ·{' '}
+                      {event.time12h}
+                    </span>
                   </li>
                 ))}
               </ul>

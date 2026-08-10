@@ -9,8 +9,8 @@ const emptyForm = {
   phone: '',
 };
 
-export default function Register() {
-  const { register } = useAuth();
+export default function RegisterPastor() {
+  const { registerPastor } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState('');
@@ -43,20 +43,20 @@ export default function Register() {
     }
 
     try {
-      const data = await register({ name, email, phone, password });
-      setSuccess(data.message || 'Account created. Please log in.');
+      const data = await registerPastor({ name, email, phone, password });
+      setSuccess(data.message || 'Pastor account created. Please log in.');
       setTimeout(() => {
-        navigate('/login/believer', {
+        navigate('/login/pastor', {
           replace: true,
           state: {
             registered: true,
             emailOrPhone: email,
-            message: 'Registration successful. Please log in to continue.',
+            message: 'Pastor registration successful. Please log in to continue.',
           },
         });
       }, 800);
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed');
+      setError(err.response?.data?.message || 'Pastor registration failed');
     } finally {
       setLoading(false);
     }
@@ -68,10 +68,10 @@ export default function Register() {
         <p className="brand-hero compact">
           Peniel <em>Evangelical Fellowship</em>
         </p>
-        <p className="eyebrow">Believer portal</p>
-        <h1>Believer registration</h1>
+        <p className="eyebrow">Pastor portal</p>
+        <h1>Pastor registration</h1>
         <p className="muted">
-          Create your account. After registering, you will sign in with your email or phone number.
+          Create your pastor account. After registering, sign in with your email or phone number.
         </p>
 
         <form onSubmit={onSubmit}>
@@ -125,15 +125,15 @@ export default function Register() {
           {error && <p className="form-status error">{error}</p>}
           {success && <p className="form-status success">{success}</p>}
           <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? 'Creating account…' : 'Register as Believer'}
+            {loading ? 'Creating account…' : 'Register as Pastor'}
           </button>
         </form>
 
         <p className="auth-foot">
-          Already have a believer account? <Link to="/login/believer">Believer Login</Link>
+          Already have a pastor account? <Link to="/login/pastor">Pastor Login</Link>
         </p>
         <p className="auth-foot">
-          Registering as a pastor? <Link to="/register/pastor">Pastor registration</Link>
+          Registering as a believer? <Link to="/register">Believer registration</Link>
         </p>
       </div>
     </div>

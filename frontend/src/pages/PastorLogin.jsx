@@ -1,12 +1,17 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function PastorLogin() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ emailOrPhone: '', password: '' });
+  const location = useLocation();
+  const [form, setForm] = useState({
+    emailOrPhone: location.state?.emailOrPhone || '',
+    password: '',
+  });
   const [error, setError] = useState('');
+  const [info] = useState(location.state?.message || '');
   const [loading, setLoading] = useState(false);
 
   const onSubmit = async (e) => {
@@ -32,6 +37,8 @@ export default function PastorLogin() {
         <p className="eyebrow">Pastor portal</p>
         <h1>Pastor Login</h1>
         <p className="muted">Sign in with your email or phone number.</p>
+
+        {info && <p className="form-status success">{info}</p>}
 
         <form onSubmit={onSubmit}>
           <label>
@@ -61,6 +68,9 @@ export default function PastorLogin() {
           </button>
         </form>
 
+        <p className="auth-foot">
+          New pastor? <Link to="/register/pastor">Register as Pastor</Link>
+        </p>
         <p className="auth-foot">
           Are you a believer? <Link to="/login/believer">Believer Login</Link>
         </p>

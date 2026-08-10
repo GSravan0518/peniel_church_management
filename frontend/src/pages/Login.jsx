@@ -29,7 +29,9 @@ export default function Login() {
         </div>
 
         <p className="auth-foot">
-          New believer? <Link to="/register">Create an account</Link>
+          New believer? <Link to="/register">Register as Believer</Link>
+          {' · '}
+          New pastor? <Link to="/register/pastor">Register as Pastor</Link>
         </p>
       </div>
     </div>

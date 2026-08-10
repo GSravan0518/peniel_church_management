@@ -22,7 +22,7 @@ const publicUser = (user) => ({
   avatar: user.avatar || '',
 });
 
-router.post('/register', async (req, res) => {
+async function createAccount(req, res, { role, notifyTitle, successMessage }) {
   try {
     const { name, email, password, phone, birthday, anniversary } = req.body;
 
@@ -49,7 +49,6 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Phone number already registered' });
     }
 
-    // Saved dynamically in MongoDB users collection
     const user = await User.create({
       name: String(name).trim(),
       email: normalizedEmail,
@@ -57,24 +56,25 @@ router.post('/register', async (req, res) => {
       phone: String(phone).trim(),
       birthday,
       anniversary,
-      role: 'member',
+      role,
     });
 
     await Notification.create({
-      title: 'New believer registration',
+      title: notifyTitle,
       message: `${user.name} registered (${user.email} · ${user.phone}).`,
       type: 'user_registered',
       forRole: 'admin',
-      meta: { userId: user._id },
+      meta: { userId: user._id, role },
     });
 
-    // Do not auto-login — believer must sign in after registering
+    // Do not auto-login — user must sign in after registering
     res.status(201).json({
-      message: 'Account created successfully. Please log in with your email or phone.',
+      message: successMessage,
       user: {
         name: user.name,
         email: user.email,
         phone: user.phone,
+        role: user.role,
       },
     });
   } catch (err) {
@@ -83,7 +83,25 @@ router.post('/register', async (req, res) => {
     }
     res.status(500).json({ message: err.message });
   }
-});
+}
+
+router.post('/register', async (req, res) =>
+  createAccount(req, res, {
+    role: 'member',
+    notifyTitle: 'New believer registration',
+    successMessage:
+      'Account created successfully. Please log in with your email or phone.',
+  })
+);
+
+router.post('/register-pastor', async (req, res) =>
+  createAccount(req, res, {
+    role: 'pastor',
+    notifyTitle: 'New pastor registration',
+    successMessage:
+      'Pastor account created successfully. Please log in with your email or phone.',
+  })
+);
 
 router.post('/login', async (req, res) => {
   try {

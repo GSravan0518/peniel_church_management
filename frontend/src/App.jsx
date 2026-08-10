@@ -13,6 +13,7 @@ import BelieverLogin from './pages/BelieverLogin';
 import PastorLogin from './pages/PastorLogin';
 import AdminLogin from './pages/AdminLogin';
 import Register from './pages/Register';
+import RegisterPastor from './pages/RegisterPastor';
 import MemberDashboard from './pages/MemberDashboard';
 import PastorDashboard from './pages/PastorDashboard';
 import AdminDashboard from './pages/AdminDashboard';
@@ -35,6 +36,7 @@ export default function App() {
             <Route path="login/pastor" element={<PastorLogin />} />
             <Route path="login/admin" element={<AdminLogin />} />
             <Route path="register" element={<Register />} />
+            <Route path="register/pastor" element={<RegisterPastor />} />
             <Route element={<ProtectedRoute roles={['member']} />}>
               <Route path="member-dashboard" element={<MemberDashboard />} />
             </Route>

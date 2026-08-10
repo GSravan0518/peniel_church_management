@@ -95,8 +95,8 @@ export default function PastorDashboard() {
       <header className="page-banner">
         <h1>Pastor Dashboard</h1>
         <p>
-          Approve prayer requests and event bookings. Approved programs appear on your calendar in
-          12-hour time. On the program day you receive reminders.
+          Approve prayer requests and event bookings. When you approve a booking, its date and time
+          are saved on the calendar. On that day the system sends you a reminder notification.
         </p>
       </header>
 
@@ -198,7 +198,8 @@ export default function PastorDashboard() {
                 <h2>Reminders · {format(selectedDay, 'EEE, MMM d')}</h2>
                 {isSameDay(selectedDay, new Date()) && (
                   <p className="form-status success">
-                    Today’s programs trigger pastor notifications automatically.
+                    Programs scheduled for today automatically notify the pastor (checked every 15
+                    minutes and when you open this page).
                   </p>
                 )}
                 {eventsOnSelected.length === 0 && (

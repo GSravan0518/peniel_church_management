@@ -1,7 +1,8 @@
 const path = require('path');
 const dotenv = require('dotenv');
 
-dotenv.config({ path: path.join(__dirname, '..', '.env') });
+// Do not override vars already set in the shell / Render
+dotenv.config({ path: path.join(__dirname, '..', '.env'), override: false });
 
 const required = ['MONGODB_URI', 'JWT_SECRET'];
 

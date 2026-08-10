@@ -46,6 +46,7 @@ router.get('/member', protect, async (req, res) => {
 
 router.get('/admin', protect, authorize('admin'), async (_req, res) => {
   try {
+    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const [
       users,
       programs,
@@ -57,6 +58,7 @@ router.get('/admin', protect, authorize('admin'), async (_req, res) => {
       believers,
       pastors,
       admins,
+      newBelieversToday,
     ] = await Promise.all([
       User.find().select('-password').sort({ createdAt: -1 }),
       HomeProgram.find().sort({ createdAt: -1 }).limit(50),
@@ -68,6 +70,7 @@ router.get('/admin', protect, authorize('admin'), async (_req, res) => {
       User.countDocuments({ role: 'member' }),
       User.countDocuments({ role: 'pastor' }),
       User.countDocuments({ role: 'admin' }),
+      User.countDocuments({ role: 'member', createdAt: { $gte: dayAgo } }),
     ]);
 
     res.json({
@@ -76,6 +79,7 @@ router.get('/admin', protect, authorize('admin'), async (_req, res) => {
         believers,
         pastors,
         admins,
+        newBelieversToday,
         programs: await HomeProgram.countDocuments(),
         pendingPrograms: await HomeProgram.countDocuments({ status: 'pending' }),
         prayers: await Prayer.countDocuments(),

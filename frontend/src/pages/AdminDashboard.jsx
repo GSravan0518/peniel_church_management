@@ -25,6 +25,15 @@ export default function AdminDashboard() {
     load().catch(() => {});
   }, []);
 
+  // Keep the users list fresh while admin is on the Users tab
+  useEffect(() => {
+    if (tab !== 'users') return undefined;
+    const id = setInterval(() => {
+      load().catch(() => {});
+    }, 12000);
+    return () => clearInterval(id);
+  }, [tab]);
+
   const uploadUserAvatar = async (userId, file, { isSelf = false } = {}) => {
     if (!file) return;
     setAvatarBusyId(userId);
@@ -219,6 +228,10 @@ export default function AdminDashboard() {
                   <span>Believers</span>
                 </div>
                 <div>
+                  <strong>{data.stats.newBelieversToday ?? 0}</strong>
+                  <span>New (24h)</span>
+                </div>
+                <div>
                   <strong>{data.stats.pastors}</strong>
                   <span>Pastors</span>
                 </div>
@@ -332,12 +345,27 @@ export default function AdminDashboard() {
 
           {tab === 'users' && (
             <div className="dash-panel">
-              <h2>All users</h2>
-              <p className="muted">Upload or change a profile picture for any believer, pastor, or admin.</p>
+              <div className="section-head">
+                <div>
+                  <h2>All users</h2>
+                  <p className="muted">
+                    Believers who register at `/register` appear here automatically (newest first).
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => load().then(() => setMessage('Users list refreshed.'))}
+                >
+                  Refresh now
+                </button>
+              </div>
               <ul className="dash-list stacked user-avatar-list">
                 {data.users.map((u) => {
                   const busy = avatarBusyId === u._id;
                   const isSelf = (user?.id || user?._id) === u._id;
+                  const isNew =
+                    Date.now() - new Date(u.createdAt).getTime() < 24 * 60 * 60 * 1000;
                   return (
                     <li key={u._id} className="user-manage-row">
                       <div className="user-manage-main">
@@ -351,12 +379,13 @@ export default function AdminDashboard() {
                         <div>
                           <strong>
                             {u.name} · {u.role}
+                            {isNew ? <span className="tag new-user-tag"> New</span> : null}
                           </strong>
                           <p>
                             {u.email} · {u.phone}
                           </p>
                           <span className="muted">
-                            {format(new Date(u.createdAt), 'MMM d, yyyy')}
+                            Joined {format(new Date(u.createdAt), 'MMM d, yyyy · h:mm a')}
                           </span>
                         </div>
                       </div>

@@ -78,6 +78,12 @@ export default function Navbar() {
             </NavLink>
           ))}
 
+          {!user && (
+            <NavLink to="/register" className="nav-register" onClick={() => setOpen(false)}>
+              Register
+            </NavLink>
+          )}
+
           <div className="nav-auth">
             {user ? (
               <>
@@ -101,14 +107,9 @@ export default function Navbar() {
                 </button>
               </>
             ) : (
-              <>
-                <Link to="/login" className="btn btn-ghost" onClick={() => setOpen(false)}>
-                  Login
-                </Link>
-                <Link to="/register" className="btn btn-primary" onClick={() => setOpen(false)}>
-                  Register
-                </Link>
-              </>
+              <Link to="/login" className="btn btn-primary nav-login" onClick={() => setOpen(false)}>
+                Login
+              </Link>
             )}
           </div>
         </nav>

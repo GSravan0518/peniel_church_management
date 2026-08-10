@@ -208,7 +208,28 @@ main {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-left: 0.4rem;
+  margin-left: 1.25rem;
+  padding-left: 1rem;
+  border-left: 1px solid var(--line);
+}
+
+.nav-register {
+  margin-left: 0.25rem;
+}
+
+.nav-login {
+  min-width: 5.5rem;
+}
+
+@media (max-width: 820px) {
+  .nav-auth {
+    margin-left: 0;
+    padding-left: 0;
+    border-left: 0;
+    margin-top: 0.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--line);
+  }
 }
 
 .nav-toggle {
@@ -1520,6 +1541,11 @@ select:focus {
 
 .file-btn {
   cursor: pointer;
+}
+
+.new-user-tag {
+  margin-left: 0.35rem;
+  color: var(--amber-deep);
 }
 
 .admin-gallery-grid {

@@ -13,6 +13,19 @@ function removeOldAvatar(avatarPath) {
   fs.unlink(filePath, () => {});
 }
 
+/** Admin: live list of registered users (newest first) */
+router.get('/', protect, authorize('admin'), async (_req, res) => {
+  try {
+    const users = await User.find().select('-password').sort({ createdAt: -1 });
+    res.json({
+      count: users.length,
+      users,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 /** Admin uploads a profile picture for any user */
 router.post(
   '/:id/avatar',

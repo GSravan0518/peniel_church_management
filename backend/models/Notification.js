@@ -9,6 +9,7 @@ const notificationSchema = new mongoose.Schema(
       enum: [
         'home_program_request',
         'prayer_request',
+        'user_registered',
         'weekly_digest',
         'day_of_program',
         'calendar_reminder',

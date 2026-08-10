@@ -1,6 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Notification = require('../models/Notification');
 const path = require('path');
 const fs = require('fs');
 const { protect } = require('../middleware/auth');
@@ -48,7 +49,7 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Phone number already registered' });
     }
 
-    // Saved in MongoDB users collection
+    // Saved dynamically in MongoDB users collection
     const user = await User.create({
       name: String(name).trim(),
       email: normalizedEmail,
@@ -59,11 +60,22 @@ router.post('/register', async (req, res) => {
       role: 'member',
     });
 
-    const token = signToken(user._id);
+    await Notification.create({
+      title: 'New believer registration',
+      message: `${user.name} registered (${user.email} · ${user.phone}).`,
+      type: 'user_registered',
+      forRole: 'admin',
+      meta: { userId: user._id },
+    });
+
+    // Do not auto-login — believer must sign in after registering
     res.status(201).json({
-      message: 'Account created and stored in the database.',
-      token,
-      user: publicUser(user),
+      message: 'Account created successfully. Please log in with your email or phone.',
+      user: {
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+      },
     });
   } catch (err) {
     if (err.code === 11000) {

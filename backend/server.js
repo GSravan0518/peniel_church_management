@@ -163,11 +163,19 @@ app.use((err, _req, res, _next) => {
 // MONGODB CONNECTION + SERVER
 // --------------------------------------------------
 
+const { ensureAdminFromEnv } = require('./utils/ensureAdmin');
+
 mongoose
   .connect(config.mongoUri)
-  .then(() => {
+  .then(async () => {
     console.log('MongoDB connected');
     console.log(`Church: ${config.churchName}`);
+
+    try {
+      await ensureAdminFromEnv();
+    } catch (err) {
+      console.error('Admin bootstrap error:', err.message);
+    }
 
     // Render provides process.env.PORT automatically.
     // Use 5000 when running locally.

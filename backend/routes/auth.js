@@ -101,8 +101,7 @@ router.post('/login', async (req, res) => {
     const user = await User.findByEmailOrPhone(identifier);
     if (!user || !(await user.matchPassword(password))) {
       return res.status(401).json({
-        message:
-          'Invalid credentials. Try email or phone with your password, or use the demo account.',
+        message: 'Invalid email/phone or password. Check your details and try again.',
       });
     }
 

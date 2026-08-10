@@ -1,7 +1,29 @@
 import axios from 'axios';
 
-// Local: http://localhost:5000/api · Render (same host): /api
-const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+/**
+ * Local: http://localhost:5000/api
+ * Render (same host): /api
+ * Never call localhost from a deployed HTTPS site.
+ */
+function resolveApiUrl() {
+  const envUrl = import.meta.env.VITE_API_URL;
+
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    const isBrowserLocal = host === 'localhost' || host === '127.0.0.1';
+
+    if (!isBrowserLocal) {
+      if (!envUrl || /localhost|127\.0\.0\.1/i.test(envUrl)) {
+        return '/api';
+      }
+      return envUrl;
+    }
+  }
+
+  return envUrl || 'http://localhost:5000/api';
+}
+
+const apiUrl = resolveApiUrl();
 
 const api = axios.create({
   baseURL: apiUrl,
@@ -16,8 +38,8 @@ api.interceptors.request.use((config) => {
 export const churchName =
   import.meta.env.VITE_CHURCH_NAME || 'Peniel Evangelical Fellowship';
 
-/** API host for uploaded files, e.g. http://localhost:5000 */
-export const apiOrigin = (apiUrl || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
+/** API host for uploaded files; empty string = same origin */
+export const apiOrigin = apiUrl.replace(/\/api\/?$/, '');
 
 export function mediaUrl(path) {
   if (!path) return '';
